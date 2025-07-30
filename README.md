@@ -129,7 +129,7 @@ TeleFilesBot/
 ├── go.mod               # Go module
 ├── go.sum               # Dependencies
 └── .github/workflows/   # GitHub Actions workflows
-    └── build.yml
+    └── main.yml
 ```
 
 ---
