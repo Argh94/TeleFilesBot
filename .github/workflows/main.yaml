@@ -1,0 +1,72 @@
+name: main Go
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        goos: [linux, windows, darwin]
+        goarch: [amd64, arm64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+          cache: false  # غیرفعال کردن کش داخلی actions/setup-go برای کنترل بهتر
+
+      - name: Clean cache directories
+        run: |
+          rm -rf .cache/go-build .cache/go-mod || true
+        shell: bash
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            .cache/go-build
+            .cache/go-mod
+          key: ${{ runner.os }}-go-${{ matrix.goos }}-${{ matrix.goarch }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-${{ matrix.goos }}-${{ matrix.goarch }}-
+            ${{ runner.os }}-go-
+
+      - name: Install dependencies
+        run: go mod download
+        env:
+          GOPATH: ${{ github.workspace }}/.cache/go
+          GOCACHE: ${{ github.workspace }}/.cache/go-build
+          GOMODCACHE: ${{ github.workspace }}/.cache/go-mod
+        shell: bash
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GOPATH: ${{ github.workspace }}/.cache/go
+          GOCACHE: ${{ github.workspace }}/.cache/go-build
+          GOMODCACHE: ${{ github.workspace }}/.cache/go-mod
+        run: |
+          go build -o output/${{ matrix.goos }}_${{ matrix.goarch }}/TeleFilesBot
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TeleFilesBot-${{ matrix.goos }}-${{ matrix.goarch }}-${{ matrix.os }}
+          path: output/${{ matrix.goos }}_${{ matrix.goarch }}/TeleFilesBot
+          if-no-files-found: warn
+          retention-days: 30
+          compression-level: 6
+          include-hidden-files: false
